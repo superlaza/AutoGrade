@@ -1,0 +1,11 @@
+CornerValidate:
+  FIXED: houghlines had an improper parameter set
+  Added: validateCorners() (incomplete)
+  Added: offset() method to determine the offset values based on the window size
+  Added: global variables pi and win as the number pi and the window size
+  Added: drawSquare() to draw a square on the image, used to help user align the sheet
+  Added: region() to black out all except the expected area for the answer sheet to be located
+  Added: Check to make sure at least 4 lines are detected
+  Added: filter the result of kmeans() on the detected lines so only lines with certain angles show (may not work)
+  added: Check to make sure at least 4 intersections are found
+  Added: run kmeans() on the intersection points to obtain only 4 points
