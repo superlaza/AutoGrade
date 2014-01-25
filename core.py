@@ -1,10 +1,13 @@
 import cv2
-import cv
 import math
 import numpy as np
-from scipy.cluster.vq import kmeans
+from scipy.cluster.vq import kmeans, whiten
+
+#425, 550
 
 video = True
+pi = cv2.cv.CV_PI
+win = (500,500)
 
 def drawCircles(im, squareOrigin):
     (ox, oy) = (squareOrigin[0], squareOrigin[1])
@@ -39,21 +42,29 @@ def convolve(im, point):
             sum+=im[point[1]-radius+i][point[0]+-radius+j]
     return sum
 
+def offset():
+    w = 0.070588 / 425 * win[1]
+    h = 0.07636 / 550 * win[0]
+    h2 = 0.02625 / 550  * win[0]
+    w2 = 0.025882 / 425 * win[1]
+    return (w,h, h2, w2)
+
 def findAnswer(im, squareOrigin, (x,y)):
     #given a pair of coordinates (x,y), finds (question number, letter answered)
     (ox, oy) = (squareOrigin[0], squareOrigin[1])
     (h, w) = im.shape
-    wOffset = 0.070588*w
-    hOffset = 0.07636*h
+    wOffset, hOffset, h2, w2 = offset()
+    wOffset *= w
+    hOffset *= h
 
     rows = 17
     col = 2
     
-    j = (y - (oy+hOffset))/(0.02625*h)
+    j = (y - (oy+hOffset))/(h2*h)
     if int((x-(ox+wOffset))/70) == 0:
-        i = (x-(ox+wOffset))/(0.025882*w)
+        i = (x-(ox+wOffset))/(w2*w)
     else:
-        i = ((x-(ox+wOffset+80))/(0.025882*w))+5
+        i = ((x-(ox+wOffset+80))/(w2*w))+5
         j+=rows
 
     return (int(round(j)),int(round(i)))
@@ -123,6 +134,31 @@ def drawIntersection(detectedLines, image):
                 cv2.circle(image, p_i , 1, (0,255,0), 3)
         return intersections
 
+#ideas: compute the center mass from the points and then we can separate the points
+    #by those that are above and below then by left and right. if we don't have 4 separate
+    # points then it failed. if we do then we have to check further. (how?)
+def validateCorners(points):
+    '''
+    for p in points:
+        print p
+    pmin = min(points, key = lambda (a,b): a + b)
+    pmax = max(points, key = lambda (a,b): a + b)
+    points = [p for p in points if not (p == pmin or p == pmax)]
+    dist_min1 = math.hypot(points[0][0] - pmin[0], points[0][1] - pmin[1])
+    dist_min2 = math.hypot(points[1][0] - pmin[0], points[1][1] - pmin[1])
+    dist_max1 = math.hypot(points[0][0] - pmax[0], points[0][1] - pmax[1])
+    dist_max2 = math.hypot(points[1][0] - pmax[0], points[1][1] - pmax[1])
+    ''''''
+    dist1 = math.hypot(p2[0] - p1[0], p2[1] - p1[1])
+    dist2 = math.hypot(p3[0] - p1[0], p3[1] - p1[1])
+    dist3 = math.hypot(p4[0] - p1[0], p4[1] - p1[1])
+    longest = max([dist1, dist2, dist3])
+    ''''''
+    print pmin
+    print pmax
+    '''
+    return True
+
 #==================================
 #==================================
 '''NEXT STEPS'''
@@ -132,94 +168,76 @@ def drawIntersection(detectedLines, image):
 #==================================
 #==================================
 
+def drawSquare(im, ((xo, yo), (x, y))):
+    cv2.line(im, (xo,yo), (x,yo), (0,255,0))
+    cv2.line(im, (x,yo), (x,y), (0,255,0))
+    cv2.line(im, (x,y), (xo,y), (0,255,0))
+    cv2.line(im, (xo,y), (xo,yo), (0,255,0))
+
+def region(im, big, small):
+    im[:big[0][0],:] = 0
+    im[:,:big[0][1]] = 0
+    im[big[1][0]:im.shape[1],:] = 0
+    im[:,big[1][1]:im.shape[0]] = 0
+    im[small[0][0]:small[1][0],small[0][1]:small[1][1]] = 0
+
 def process(im):
+    sbig = ((80,80), (420,420))
+    ssmall = ((150,150), (350,350))
     temp = im
-    im = cv2.resize(im, (425,550), im)
+    im = np.array(im[:,:im.shape[0],:])
+    im = cv2.resize(im, win)
     gray = cv2.cvtColor(im,cv2.COLOR_BGR2GRAY)
     reval, thresh = cv2.threshold(gray, 200.0, 255.0, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
     
-    #edges = cv2.Canny(thresh, 100.0, 240.0,2)
-    gedges = cv2.Canny(gray, 100.0, 240.0,2)
+    drawSquare(im, sbig)
+    drawSquare(im, ssmall)
+
+    #edges = cv2.Canny(thresh, 100.0, 240.0,2)    
+    edges = cv2.Canny(gray, 100.0, 240.0)
 
     #cv2.imshow('dfd', gedges)
     #cv2.imshow('dfdf', edges)
-    edges = gedges
-
-    '''
-    cv2.imshow('df', edges)
-    #perform a opening
-    thresh = cv2.erode(edges, np.ones((4,4)),iterations=1)
-    thresh = cv2.dilate(edges, np.ones((4,4)),iterations=1)
-    '''
-
 
     #thresh = cv2.GaussianBlur(thresh, (7, 7), 2.0, 2.0)
     blur = thresh
 
+    #edges = cv2.dilate(edges, np.ones((4,4)),iterations=1)
 
-    '''
-    #=======================================
-    #Find Skeleton
-    #=======================================
-    img = cv2.bitwise_not(gray)
-    size = np.size(img)
-    skel = np.zeros(img.shape,np.uint8)
-     
-    ret,img = cv2.threshold(img,127,255,0)
-    #im = cv2.bitwise_not(im)
-    element = cv2.getStructuringElement(cv2.MORPH_CROSS,(3,3))
-    done = False
-    
-    #while( not done):
-    for i in range(0,20):
-        eroded = cv2.erode(img,element)
-        temp = cv2.dilate(eroded,element)
-        temp = cv2.subtract(img,temp)
-        skel = cv2.bitwise_or(skel,temp)
-        img = eroded.copy()
-        
-        zeros = size - cv2.countNonZero(img)
-        if zeros==size:
-            done = True
-    #im = cv2.bitwise_not(im)
-    cv2.imshow('skel',cv2.bitwise_not(img))
-    #=======================================
-    '''
-
-    edges = cv2.dilate(edges, np.ones((4,4)),iterations=1)
-
+    region(edges, sbig, ssmall)
+    cv2.imshow("im", edges)
     #FLAG1: currently not detecting lines close 0 degrees    
     try:
-        lines = cv2.HoughLines( edges, 1, cv2.cv.CV_PI/180, 200)[0] #flatten list one level
+        lines = cv2.HoughLines( edges, 1, cv2.cv.CV_PI/180, 100)[0] #flatten list one level
     except TypeError:
         print "Not enough edges detected by canny"
         if video == True:
             return
-
     
-    #need to fix negative radius, just ad hoc solution without much thought
-    for i in range(0,lines.shape[0]):
-        [rho, t] = lines[i]
-        if (rho < 0):
-            if (t-cv2.cv.CV_PI < 0):
-                lines[i] = [-rho, 0]
-            else:
-                lines[i] = [-rho, t-cv2.cv.CV_PI]
-    
+    if len(lines) < 4:
+        return
     print "Detected "+str(lines.shape[0])+" lines"
+    #lines = whiten(lines)
     lines = kmeans(lines,8)[0]
+    width = pi / 8
+    lines = np.array([l for l in lines
+                      if not ((l[1] > (pi / 4) - width and l[1] < (pi / 4) + width)
+                      or (l[1] > (3 * pi / 4) - width and l[1] < (3 * pi / 4) + width))])
     
     for line in lines:
         p1 = (int(round(lineToPointPair(line)[0][0])),int(round(lineToPointPair(line)[0][1])))
         p2 = (int(round(lineToPointPair(line)[1][0])),int(round(lineToPointPair(line)[1][1])))
-        cv2.line(thresh, p1, p2, (255,255,255))
+        cv2.line(edges, p1, p2, (255,255,255))
 
-    cv2.imshow('dfdf', thresh)
     #compute intersections points of the resultant lines, dropping right-most, bottom-most point
     intersections = drawIntersection(lines, im)
+    if len(intersections) < 4:
+        return
+    #intersections = whiten(np.array(intersections))
+    intersections = kmeans(np.array(intersections), 4)[0].tolist()
 
-    print lines
-    print intersections
+    if not validateCorners(intersections):
+        return
     
     #cv2.imshow('image', blur)
     #cv2.imshow('thresh', thresh)
@@ -229,9 +247,13 @@ def process(im):
         return
 
     #show computed intersection points
-    for point in intersections:
-        cv2.circle(im, (int(round(point[0])),int(round(point[1]))) , 6, (0,0,255), -1)
+    try:
+        for point in intersections:
+            cv2.circle(im, (int(round(point[0])),int(round(point[1]))) , 6, (0,0,255), -1)
+    except OverflowError:
+        return
     
+    cv2.imshow('dfdf', im)
     
     intersections.sort()
     intersections.pop()
@@ -252,8 +274,15 @@ def process(im):
     rows,cols,depth = im.shape
     registered = cv2.warpAffine(thresh, transform, (cols,rows))
 
+    template = cv2.cvtColor(cv2.imread('answerTemplate.jpg'),cv2.COLOR_BGR2GRAY)
+    blank = np.ones((2200, 2200), dtype=np.uint8) * 255
+    blank[:,:1700] = template
+    template = cv2.resize(blank, (500,500))
+    
+    blend = cv2.addWeighted(registered, .7, template, .3, 0)
+    cv2.imshow("blend", blend)
 
-    cv2.imshow("warped.png",registered)
+    #cv2.imshow("warped.png",registered)
     #doesn't actually draw circles, returns locations of bubble centers taken from perfect template
     #the ordered pair argument is the offset to the upperleft corner, shouldn't be hardcoded
     bubbles = drawCircles(registered, (29,49))
@@ -299,11 +328,12 @@ else:
     ramp_frames = 4
     camera = cv2.VideoCapture(camera_port)
     def get_image():
-     retval, im = camera.read()
-     return im
+        retval, im = camera.read()
+        return im
 
     for i in xrange(ramp_frames):
-     temp = get_image()
+        temp = get_image()
+        print temp.shape
 
     while True:
         im = get_image()
