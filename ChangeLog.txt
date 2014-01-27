@@ -1,3 +1,7 @@
+0.0.2
+Modularization
+  Added: Code refactor, compartmentalized algorithm into separate functions 
+
 0.0.1
 CornerValidate:
   FIXED: houghlines had an improper parameter set
@@ -10,7 +14,3 @@ CornerValidate:
   Added: filter the result of kmeans() on the detected lines so only lines with certain angles show (may not work)
   added: Check to make sure at least 4 intersections are found
   Added: run kmeans() on the intersection points to obtain only 4 points
-  
-0.0.2
-Modularization
-  Added: Code refactor, compartmentalized algorithm into separate functions 
