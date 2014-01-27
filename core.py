@@ -5,7 +5,6 @@ from scipy.cluster.vq import kmeans, whiten
 
 #425, 550
 
-video = True
 pi = cv2.cv.CV_PI
 win = (500,500)
 
@@ -181,7 +180,7 @@ def region(im, big, small):
     im[:,big[1][1]:im.shape[0]] = 0
     im[small[0][0]:small[1][0],small[0][1]:small[1][1]] = 0
 
-def process(im):
+def PreProcessing(im):
     sbig = ((80,80), (420,420))
     ssmall = ((150,150), (350,350))
     temp = im
@@ -193,31 +192,24 @@ def process(im):
     drawSquare(im, sbig)
     drawSquare(im, ssmall)
 
-    #edges = cv2.Canny(thresh, 100.0, 240.0,2)    
     edges = cv2.Canny(gray, 100.0, 240.0)
 
-    #cv2.imshow('dfd', gedges)
-    #cv2.imshow('dfdf', edges)
-
-    #thresh = cv2.GaussianBlur(thresh, (7, 7), 2.0, 2.0)
-    blur = thresh
-
-    #edges = cv2.dilate(edges, np.ones((4,4)),iterations=1)
-
     region(edges, sbig, ssmall)
-    cv2.imshow("im", edges)
-    #FLAG1: currently not detecting lines close 0 degrees    
+    cv2.imshow('edges', edges)
+    return edges
+
+def FindPoints(edges):
+    
     try:
         lines = cv2.HoughLines( edges, 1, cv2.cv.CV_PI/180, 100)[0] #flatten list one level
     except TypeError:
         print "Not enough edges detected by canny"
-        if video == True:
-            return
+        return []
     
     if len(lines) < 4:
-        return
-    print "Detected "+str(lines.shape[0])+" lines"
-    #lines = whiten(lines)
+        return []
+    #print "Detected "+str(lines.shape[0])+" lines"
+
     lines = kmeans(lines,8)[0]
     width = pi / 8
     lines = np.array([l for l in lines
@@ -238,33 +230,36 @@ def process(im):
 
     if not validateCorners(intersections):
         return
-    
-    #cv2.imshow('image', blur)
-    #cv2.imshow('thresh', thresh)
-       
-    if (video == True and len(intersections)==0):
+
+    if (intersections == None):
+        print "none"
+        return []
+    if (len(intersections)==0):
         print 0
-        return
+        return []
 
     #show computed intersection points
     try:
         for point in intersections:
             cv2.circle(im, (int(round(point[0])),int(round(point[1]))) , 6, (0,0,255), -1)
     except OverflowError:
-        return
+        return []
     
     cv2.imshow('dfdf', im)
     
     intersections.sort()
     intersections.pop()
 
-    #cv2.imshow('image', im)
-    
+    cv2.imshow('dfja', im)
+
+    return intersections
+
+def Transform(im, points):
     #three points and their mapped versions used to compute underlying affine transform
     dstTriangle = np.array([[25,45],[25,336],[307,45]], np.float32)
-    srcTriangle = np.array(intersections,np.float32)
+    srcTriangle = np.array(points,np.float32)
     
-    if(video == True and not (len(dstTriangle)-len(srcTriangle))==0):
+    if(not (len(dstTriangle)-len(srcTriangle))==0):
         return
     
     #compute transform based on point mappings above
@@ -272,28 +267,30 @@ def process(im):
 
     #get image dimension (redundant), then apply derived transform to obtain registered image
     rows,cols,depth = im.shape
-    registered = cv2.warpAffine(thresh, transform, (cols,rows))
-
+    registered = cv2.warpAffine(im, transform, (cols,rows))
+    
+    #adjust template to show difference between it and the registered image
     template = cv2.cvtColor(cv2.imread('answerTemplate.jpg'),cv2.COLOR_BGR2GRAY)
     blank = np.ones((2200, 2200), dtype=np.uint8) * 255
     blank[:,:1700] = template
-    template = cv2.resize(blank, (500,500))
-    
+    #template = cv2.resize(blank, (500,500))
+    template = cv2.resize(blank, (640, 480))
+
+    print template.shape
+    print registered.shape
+    registered = cv2.cvtColor(registered, cv2.COLOR_BGR2GRAY)    
     blend = cv2.addWeighted(registered, .7, template, .3, 0)
+    
     cv2.imshow("blend", blend)
 
+    return registered
+
+def Grade(registered):
     #cv2.imshow("warped.png",registered)
     #doesn't actually draw circles, returns locations of bubble centers taken from perfect template
     #the ordered pair argument is the offset to the upperleft corner, shouldn't be hardcoded
     bubbles = drawCircles(registered, (29,49))
-    
-    '''need this for still somehow
-    if cv2.cv.WaitKey(0) == 27:
-        cv2.cv.DestroyAllWindows()
-    '''
 
-    #print convolve(registered, bubbles[2])
-    
     #for every bubble coordinate, convolve that location with a kernal to see if that answer was bubbled
     answers = {}
     '''i should fix threshold for convolution'''
@@ -316,28 +313,31 @@ def process(im):
     for key in sorted(answers.iterkeys()):
         print "%d: %s" %(key, answers[key])
     
-if video == False:
-    #currently resizing images to match template, this could account for slight errors
-    im = cv2.imread("answersPedro.jpg")
-    process(im)
+camera_port = 0
+ramp_frames = 4
+camera = cv2.VideoCapture(camera_port)
+def get_image():
+    retval, im = camera.read()
+    return im
 
-    if cv2.cv.WaitKey(0) == 27:
-        cv2.cv.DestroyAllWindows()
-else:
-    camera_port = 0
-    ramp_frames = 4
-    camera = cv2.VideoCapture(camera_port)
-    def get_image():
-        retval, im = camera.read()
-        return im
+for i in xrange(ramp_frames):
+    temp = get_image()
+    print temp
 
-    for i in xrange(ramp_frames):
-        temp = get_image()
-        print temp.shape
+while True:
+    if cv2.cv.WaitKey(10) == 27:
+        break
+    im = get_image()
 
-    while True:
-        im = get_image()
-        process(im)
-        if cv2.cv.WaitKey(10) == 27:
-            break
-    cv2.cv.DestroyAllWindows()
+    edges = PreProcessing(im)
+    intersections = FindPoints(edges)
+    if(intersections == None):
+        continue
+    if(len(intersections)==0):
+        print "Error finding points"
+        continue
+    registered = Transform(im, intersections)
+    if (registered == None):
+        continue
+    Grade(registered)
+cv2.cv.DestroyAllWindows()
