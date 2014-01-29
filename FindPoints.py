@@ -76,26 +76,30 @@ def drawIntersection(detectedLines, image):
     #by those that are above and below then by left and right. if we don't have 4 separate
     # points then it failed. if we do then we have to check further. (how?)
 def validateCorners(points):
-    '''
-    for p in points:
-        print p
-    pmin = min(points, key = lambda (a,b): a + b)
-    pmax = max(points, key = lambda (a,b): a + b)
-    points = [p for p in points if not (p == pmin or p == pmax)]
-    dist_min1 = math.hypot(points[0][0] - pmin[0], points[0][1] - pmin[1])
-    dist_min2 = math.hypot(points[1][0] - pmin[0], points[1][1] - pmin[1])
-    dist_max1 = math.hypot(points[0][0] - pmax[0], points[0][1] - pmax[1])
-    dist_max2 = math.hypot(points[1][0] - pmax[0], points[1][1] - pmax[1])
-    ''''''
-    dist1 = math.hypot(p2[0] - p1[0], p2[1] - p1[1])
-    dist2 = math.hypot(p3[0] - p1[0], p3[1] - p1[1])
-    dist3 = math.hypot(p4[0] - p1[0], p4[1] - p1[1])
-    longest = max([dist1, dist2, dist3])
-    ''''''
-    print pmin
-    print pmax
-    '''
+    above, below, left, right = partitionPoints(points)
+    if not (len(above) == 2 and len(below) == 2
+            and len(left) == 2 and len(right) == 2):
+        return False
+    
     return True
+
+def findCorners(points):
+    above, below, _, _ = partitionPoints(points)
+    topL = min(above, key = lambda (p1,p2): p1+p2)
+    topR = max(above, key = lambda (p1,p2): p1+p2)
+    botL = min(below, key = lambda (p1,p2): p1+p2)
+
+    return topL, topR, botL
+
+def partitionPoints(points):
+    cx = sum(points[:][0]) / len(points)
+    cy = sum(points[:][1]) / len(points)
+    above = [p for p in points if p[1] < cy]
+    below = [p for p in points if p[1] > cy]
+    left = [p for p in points if p[0] < cx]
+    right = [p for p in points if p[0] > cx]
+
+    return above, below, left, right
 
 def findPoints(edges, im):
     try:
@@ -131,4 +135,6 @@ def findPoints(edges, im):
     if not validateCorners(intersections):
         raise Errors.ImproperIntersectionsError
 
-    return intersections, im
+    topL, topR, botL = findCorners(intersections)
+
+    return [topL, topR, botL], im
