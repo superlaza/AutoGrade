@@ -1,6 +1,17 @@
 0.0.2
 Modularization
-  Added: Code refactor, compartmentalized algorithm into separate functions 
+  Added: Code refactor, compartmentalized algorithm into separate modules.
+          The Main file is the main loop that calls the following
+          Preprocess.py accepts the image, the new shape, and the big and small square regions.
+            It returns the edges image with only the region drawn and the original image with the square
+            regions drawn and resized.
+          FindPoints.py accepts the edges image and the image.
+            It returns the list of intersections and the image with the intersections drawn on.
+          Transform.py accepts the image and the intersection points used to transform.
+            It returns the registered image and the blend of the image with the template.
+          Grade.py accepts the registered.
+            It does not return but will list out the answers.
+  Added: Error.py to contain the user defined errors that are now being raised
 
 0.0.1
 CornerValidate:
