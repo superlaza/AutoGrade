@@ -1,5 +1,6 @@
 0.0.2
 Modularization
+  Added: Corner validation now mostly works (methods added to FindPoints.py: findCorners(), partitionPoints())
   Added: Code refactor, compartmentalized algorithm into separate modules.
           The Main file is the main loop that calls the following
           Preprocess.py accepts the image, the new shape, and the big and small square regions.
