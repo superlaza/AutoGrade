@@ -1,3 +1,9 @@
+0.0.4
+Registration Validation
+  Added: minimizing sum(bitwise_and(registered, template)) as criterion for optimal registration
+  Added: quota for the number of improvements to the registration before grading takes place
+  Added: function getAnswerMap returns structure of answer coords according to the specification in google docs
+
 0.0.3
 Perspective Transform and Canny Refinement
   Added: Main - View variable for debugging purposes, shows a set of images based on its value
