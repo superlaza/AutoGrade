@@ -18,13 +18,5 @@ def transform(im, points):
     #get image dimension (redundant), then apply derived transform to obtain registered image
     rows, cols, depth = im.shape
     registered = cv2.warpPerspective(im, transform, (425, 550))
-    
-    #adjust template to show difference between it and the registered image
-    template = cv2.cvtColor(cv2.imread('answerTemplate.jpg'), cv2.COLOR_BGR2GRAY)
-    #reduce to 1/4 size
-    template = cv2.resize(template, (int(round(0.25*template.shape[1])), int(round(0.25*template.shape[0]))))
 
-    registered = cv2.cvtColor(registered, cv2.COLOR_BGR2GRAY)  
-    blend = cv2.addWeighted(registered, .7, template, .3, 0)
-
-    return registered, blend
+    return registered
