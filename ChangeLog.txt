@@ -1,3 +1,14 @@
+0.0.3
+Perspective Transform and Canny Refinement
+  Added: Main - View variable for debugging purposes, shows a set of images based on its value
+  Added: Main - Suppresion variable to suppress errors being printed to console
+  Added: Preprocessing - Morphological tranformations to the canny output
+  Added: FindPoints - now outputs 4 points, as needed for the perspective transform
+  Fixed: Transform - transformation is now a 3D perspective transform, fourth point of template hard coded in source
+  Added: Grade - kmeans on convolution results to find threshold, currently crudely taking average between high and low
+  Added: Grade - deprecated code based on ideal template (425, 550) metrics
+
+
 0.0.2
 Modularization
   Added: Corner validation now mostly works (methods added to FindPoints.py: findCorners(), partitionPoints())
