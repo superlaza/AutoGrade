@@ -88,8 +88,9 @@ def findCorners(points):
     topL = min(above, key = lambda (p1,p2): p1+p2)
     topR = max(above, key = lambda (p1,p2): p1+p2)
     botL = min(below, key = lambda (p1,p2): p1+p2)
+    botR = max(below, key = lambda (p1,p2): p1+p2)
 
-    return topL, topR, botL
+    return topL, topR, botL, botR
 
 def partitionPoints(points):
     cx = sum(points[:][0]) / len(points)
@@ -123,8 +124,7 @@ def findPoints(edges, im):
         p2 = (int(round(lineToPointPair(line)[1][0])), int(round(lineToPointPair(line)[1][1])))
         cv2.line(edges, p1, p2, (255,255,255))
 
-    #compute intersections points of the resultant lines,
-    # dropping right-most, bottom-most point
+    #compute intersections points of the resultant lines
     intersections = drawIntersection(lines, im)
     
     if len(intersections) < 4:
@@ -135,6 +135,6 @@ def findPoints(edges, im):
     if not validateCorners(intersections):
         raise Errors.ImproperIntersectionsError
 
-    topL, topR, botL = findCorners(intersections)
+    topL, topR, botL, botR = findCorners(intersections)
 
-    return [topL, topR, botL], im
+    return [topL, topR, botL, botR], im

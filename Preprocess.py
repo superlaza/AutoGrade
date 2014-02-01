@@ -21,6 +21,15 @@ def preprocess(im, win, sbig, ssmall):
     
     edges = cv2.Canny(gray, 100, 240)
 
+    temp = cv2.dilate(edges, np.ones((3,3)), iterations=4)
+    edges = cv2.erode(temp, np.ones((3,3)), iterations=6)
+    edges = cv2.dilate(edges, np.ones((3,3)), iterations=4)
+
+    edges = cv2.erode(temp - edges, np.ones((3,3)), iterations = 5)
+
+    #cv2.imshow('temp', temp)
+    #cv2.imshow('edges', edges)
+
     drawSquare(im, sbig)
     drawSquare(im, ssmall)
     
