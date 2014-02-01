@@ -1,8 +1,9 @@
 import cv2
+import numpy as np
 from Preprocess import preprocess
 from FindPoints import findPoints
 from Transform import transform
-from Grade import grade
+from Grade import grade,drawAnswerCoords
 import Errors
 
 camera_port = 0
@@ -13,14 +14,23 @@ ssmall = ((150,150), (350,350))
 
 #for debugging
 '''opts: output, canny, blend'''
-view = "blend"
-suppress = False
+view = "output"
+suppress = True
 
 def get_image(camera):
     retval, im = camera.read()
     return im
 
+#to draw image with aligned circles to test alignment of regged image
+
 def main():
+
+    #for criterion
+    #minval can be any exorbitantly large value
+    minval = 5000000
+    quota = 0
+
+    
     camera = cv2.VideoCapture(camera_port)
 
     for i in xrange(ramp_frames):
@@ -28,6 +38,8 @@ def main():
 
     while True:
         if cv2.cv.WaitKey(10) == 27:
+            #if escaped, last ditch grade
+            grade(registered)
             break
         im = get_image(camera)
 
@@ -74,24 +86,62 @@ def main():
             cv2.imshow("drawn intersections", im)
         
         try:
-            registered, blend = transform(im, intersections)
+            registered = transform(im, intersections)
         except Errors.NotEnoughPointsToTransformError as e:
             if not suppress:
                 print e
             continue
 
-        if view == "output" or view == "blend":
-            cv2.imshow("blended", blend)
-        
-        try:
-            grade(registered)
-        except:
-            if not suppress:
-                print "something bad is happening at Grade"
-            continue
+        '''==========BLENDING AND REGISTRATION CRITERION=========='''
+                    #-----------------------------
+                    #This is for visual comparison
+                    #-----------------------------
+        #template to show difference between it and the registered image
+        template_visual = cv2.cvtColor(cv2.imread('answerTemplate.jpg'), cv2.COLOR_BGR2GRAY)
+        #reduce to 1/4 size
+        size = (int(round(0.25*template_visual.shape[1])), int(round(0.25*template_visual.shape[0])))
+        template_visual = cv2.resize(template_visual, size)
 
-        #as soon as we grade it once, stop
-        #break
+                    #-----------------------------------
+                    #This is for mathematical comparison
+                    #-----------------------------------
+        #create criterion template, reverse size tuple
+        template_math = np.zeros(size[::-1], dtype=np.uint8)
+        drawAnswerCoords(template_math)
+
+        #adjust registered
+        registered = cv2.cvtColor(registered, cv2.COLOR_BGR2GRAY)
+        retval, registered = cv2.threshold(registered, 70, 255, cv2.THRESH_BINARY)
+
+        #compute blend
+        blend_math = cv2.bitwise_and(registered, template_math)
+        blend_visual = cv2.addWeighted(registered, .7, template_visual, .3, 0)
+
+        #impose criterion
+        blend_sum = np.sum(blend_math)
+        if blend_sum < minval:
+            #take 10 improvements before showing grade
+            print blend_sum
+            quota += 1
+            minval = blend_sum
+        else:
+            continue
+        
+        
+        if view == "output" or view == "blend":
+            cv2.imshow("blended", blend_math)
+
+        '''======================================================='''
+
+        #registration criterion, only grade if we've improved 5 times
+        if quota == 4:
+            try:
+                grade(registered)
+            except:
+                if not suppress:
+                    print "something bad is happening at Grade"
+                continue
+            break
         
     cv2.cv.DestroyAllWindows()
 
