@@ -1,12 +1,19 @@
 import cv2
 import numpy as np
 import Errors
+from AnswerLayout import container, pageDims
 
 '''template dims hard coded'''
+#pageDims are (width, height)
+myDims = [530,750]
+
 def transform(im, points):
     #four points and their mapped versions used to compute underlying perspective transform
-    #listed as TL, TR, BL, BR
-    dstSquare = np.array([[25,45],[307,45],[25,336],[307, 336]], np.float32)
+    #lexicographically ordered list
+    pList = [np.round((myDims * p)/pageDims).astype(int).tolist() for p in container.pList]
+
+    #error if points are float32
+    dstSquare = np.array(pList, np.float32)
     srcSquare = np.array(points,np.float32)
     
     if (not (len(dstSquare) - len(srcSquare)) == 0):
@@ -15,8 +22,6 @@ def transform(im, points):
     #compute transform based on point mappings above
     transform = cv2.getPerspectiveTransform(srcSquare, dstSquare)
 
-    #get image dimension (redundant), then apply derived transform to obtain registered image
-    rows, cols, depth = im.shape
-    registered = cv2.warpPerspective(im, transform, (425, 550))
+    registered = cv2.warpPerspective(im, transform, tuple(myDims))
 
     return registered
