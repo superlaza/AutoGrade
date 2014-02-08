@@ -1,3 +1,37 @@
+0.0.4
+Registration Validation
+  Added: minimizing sum(bitwise_and(registered, template)) as criterion for optimal registration
+  Added: quota for the number of improvements to the registration before grading takes place
+  Added: function getAnswerMap returns structure of answer coords according to the specification in google docs
+
+0.0.3
+Perspective Transform and Canny Refinement
+  Added: Main - View variable for debugging purposes, shows a set of images based on its value
+  Added: Main - Suppresion variable to suppress errors being printed to console
+  Added: Preprocessing - Morphological tranformations to the canny output
+  Added: FindPoints - now outputs 4 points, as needed for the perspective transform
+  Fixed: Transform - transformation is now a 3D perspective transform, fourth point of template hard coded in source
+  Added: Grade - kmeans on convolution results to find threshold, currently crudely taking average between high and low
+  Added: Grade - deprecated code based on ideal template (425, 550) metrics
+
+
+0.0.2
+Modularization
+  Added: Corner validation now mostly works (methods added to FindPoints.py: findCorners(), partitionPoints())
+  Added: Code refactor, compartmentalized algorithm into separate modules.
+          The Main file is the main loop that calls the following
+          Preprocess.py accepts the image, the new shape, and the big and small square regions.
+            It returns the edges image with only the region drawn and the original image with the square
+            regions drawn and resized.
+          FindPoints.py accepts the edges image and the image.
+            It returns the list of intersections and the image with the intersections drawn on.
+          Transform.py accepts the image and the intersection points used to transform.
+            It returns the registered image and the blend of the image with the template.
+          Grade.py accepts the registered.
+            It does not return but will list out the answers.
+  Added: Error.py to contain the user defined errors that are now being raised
+
+0.0.1
 CornerValidate:
   FIXED: houghlines had an improper parameter set
   Added: validateCorners() (incomplete)
