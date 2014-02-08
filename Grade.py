@@ -2,7 +2,7 @@
 import cv2
 from scipy.cluster.vq import kmeans
 import numpy as np
-from AnswerLayout import answerMap, pageDims, questions
+from AnswerLayout import answerMap, pageDims
 
 #IMPORTANT. radius should be adjusted programmatically, not manually
 radius = 6
@@ -54,6 +54,7 @@ def grade(registered):
         if(convolve(registered, local_answerMap[pair]) > thresh):
             (num, letter) = pair
             answers[num] = letter
+            
     count = 0
     missing = []
     for num in sorted(answers.iterkeys()):
