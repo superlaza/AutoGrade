@@ -124,8 +124,9 @@ ID = Box(IDTL, IDBR)
 def ndrawBubble(im, loc, letter, num):
     cv2.putText(im,letter,tuple(loc+letterCenterOffset), font, 1,color,thickness-1)
     cv2.circle(im,tuple(loc), radius, color, thickness)
-    #change precision to manage division
-    answerMap[(num, letter)] = loc.astype(float)/pageDims
+    if not num in answerMap.keys():
+        answerMap[num] = {}
+    answerMap[num][letter] = loc.astype(float)/pageDims
 
 #input position is the intersection of left wall of text and the centerline axis
 def ndrawLetters(im, loc, num):
@@ -177,11 +178,11 @@ def ndrawBlank(im):
         ndrawAnswerColumn(im, origin_i, qRange)
     return im
 
-#answerMap make sure answerMap is generated before this is called
+#make sure answerMap is generated before this is called
 def generateTest(im, answerMap):
     for i in range(0, questions):
         (num, letter) = (i, letterSet[randint(0,len(letterSet)-1)])
-        cv2.circle(im, tuple(np.round(pageDims*answerMap[(num, letter)]).astype(int)), radius, color, -1)
+        cv2.circle(im, tuple(np.round(pageDims*answerMap[num][letter]).astype(int)), radius, color, -1)
     return im
 
 #initialize image and draw borders if parameter is set to True
