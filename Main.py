@@ -32,6 +32,23 @@ def main():
         #the pressed key or -1 if no key was pressed before the specified time
         #had elapsed. Escape code is 27
         wk = cv2.cv.WaitKey(10)
+
+        #registration criterion, only grade if we've improved 7 times
+        #break on space bar
+        if quota == 6 or wk == 32:
+            #if registered exists, try grading it. otherwise, break
+            #if reg exists and you grade it successfully, break. o/w keep going
+            if 'registered' in locals():
+                grade(registered)
+                try:
+                    if not grade(registered):
+                        cv2.imwrite('misaligned.jpg', blend_visual)
+                    break
+                except:
+                    if not suppress:
+                        print "something bad is happening at Grade"
+            else:
+                break
         
         retval, im = camera.read()
         
@@ -41,7 +58,7 @@ def main():
             if view == "processed":
                 cv2.imshow('edges', edges)
             if view == "output" or view =="region" or view == "blend":
-                cv2.imshow("image", im)
+                cv2.imshow("image", cv2.flip(im, 1))
             
             intersections = findPoints(edges)
             
@@ -54,14 +71,20 @@ def main():
                 print "something bad is happening at preprocess"
             continue
 
+        #show window around points
+        w = 30
+        for point in intersections:
+            cv2.circle(im, (int(round(point[0])), int(round(point[1]))),
+                       1, (0,0,255), -1)
+            cv2.imwrite(str(point)+'.jpg', cv2.resize(im[point[0]-w:point[0]+w,point[1]-w:point[1]+w], (0,0), fx=4, fy=4))        
         #if no points found, this code isn't seen
         #show computed intersection points
         for point in intersections:
             cv2.circle(im, (int(round(point[0])), int(round(point[1]))),
                        6, (0,0,255), -1)
-        
+
         if view == "output":
-            cv2.imshow("drawn intersections", im)
+            cv2.imshow("drawn intersections", cv2.flip(im, 1))
         
 
         try:
@@ -106,20 +129,9 @@ def main():
             minval = blend_sum
 
             if view == "output" or view == "blend":
-                cv2.imshow("blended", blend_visual)
+                cv2.imshow("blended", blend_math)
         
         '''======================================================='''
-
-        #registration criterion, only grade if we've improved 9 times
-        if quota == 6 or wk == 27:
-            try:
-                if not grade(registered):
-                    cv2.imwrite('misaligned.jpg', blend_visual)
-                break
-            except:
-                if not suppress:
-                    print "something bad is happening at Grade"
-                continue
         
     cv2.cv.DestroyAllWindows()
     camera.release()
