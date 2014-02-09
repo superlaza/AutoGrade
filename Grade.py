@@ -1,18 +1,17 @@
-#these imports are for debugging
 import cv2
-from scipy.cluster.vq import kmeans
 import numpy as np
 from AnswerLayout import answerMap, pageDims
 
 #IMPORTANT. radius should be adjusted programmatically, not manually
-radius = 6
+radius = 10
 
 def ndrawAnswerCoords(im):
     #shape is given as height by width, so it needs to be reversed
     imDims = np.array(list(im.shape[::-1]))
-    for pair in answerMap:
-        loc = tuple(np.round(imDims*answerMap[pair]).astype(int))
-        cv2.circle(im, loc , radius, (255,255,255), -1)
+    for num in answerMap:
+        for letter in answerMap[num]:
+            loc = tuple(np.round(imDims*answerMap[num][letter]).astype(int))
+            cv2.circle(im, loc , radius/2, (255,255,255), -1)
     return im
     
 def convolve(im, point):
@@ -30,31 +29,35 @@ def grade(registered):
     registered = cv2.resize(registered, tuple(pageDims[::-1]))
     imDims = np.array(list(registered.shape[::-1]))
 
-    #enhance bubbles to ensure they're catched by convolution
-    registered = cv2.dilate(registered, np.ones((3,3)), iterations=6)
-
+    #generate local answerMap
     local_answerMap = {}
-    for pair in answerMap:
-        loc = tuple(np.round(imDims*answerMap[pair]).astype(int))
-        local_answerMap[pair] = loc
+    for num in answerMap:
+        for letter in answerMap[num]:
+            loc = tuple(np.round(imDims*answerMap[num][letter]).astype(int))
+            if not num in local_answerMap.keys():
+                local_answerMap[num] = {}
+            local_answerMap[num][letter] = loc
         
-    #should programmatically determine treshold for convolutions
+    #thresholding
     retval, registered = cv2.threshold(registered, 80, 255, cv2.THRESH_BINARY_INV)
 
-    #determine threshold for convolutions
-    convs = []
-    for pair in local_answerMap:
-        convs.append(convolve(registered, local_answerMap[pair]))
-    out = kmeans(np.array(convs), 2)[0]
-    thresh = (max(out.tolist())-min(out.tolist()))/2
 
-    #for every bubble coordinate, convolve that location with a kernal to see if that answer was bubbled
+    #there is actually a perfect morphological opening based on circle radius
+    #that would remove noise
+    registered = cv2.erode(registered, np.ones((3,3)), iterations=6)
+    registered = cv2.dilate(registered, np.ones((3,3)), iterations=6)
+
+    #for every number, check which letter has highest convolution
     answers = {}
-    for pair in local_answerMap:
-        if(convolve(registered, local_answerMap[pair]) > thresh):
-            (num, letter) = pair
-            answers[num] = letter
-            
+    for num in local_answerMap:
+        max = 0
+        for letter in local_answerMap[num]:
+            res = convolve(registered, local_answerMap[num][letter])
+            if res>max:
+                max = res
+                answers[num] = letter
+
+    #print answers and check if any were missing
     count = 0
     missing = []
     for num in sorted(answers.iterkeys()):
@@ -71,11 +74,11 @@ def grade(registered):
 
     #not sure why this is being resized here
     registered = cv2.resize(registered, tempSize[::-1])
-    
+
+    #if numbers are missing, print the registered image
     if len(missing)==0:
         print "complete grade"
         return True
     else:
         print "missing: ", missing
-        #cv2.imwrite('misaligned.jpg', registered)
         return False
