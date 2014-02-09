@@ -70,13 +70,16 @@ def main():
             if not suppress:
                 print "something bad is happening at preprocess"
             continue
-
+        
+        '''
         #show window around points
         w = 30
         for point in intersections:
             cv2.circle(im, (int(round(point[0])), int(round(point[1]))),
                        1, (0,0,255), -1)
             cv2.imwrite(str(point)+'.jpg', cv2.resize(im[point[0]-w:point[0]+w,point[1]-w:point[1]+w], (0,0), fx=4, fy=4))        
+        '''
+        
         #if no points found, this code isn't seen
         #show computed intersection points
         for point in intersections:
