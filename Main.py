@@ -39,7 +39,6 @@ def main():
             #if registered exists, try grading it. otherwise, break
             #if reg exists and you grade it successfully, break. o/w keep going
             if 'registered' in locals():
-                grade(registered)
                 try:
                     if not grade(registered):
                         cv2.imwrite('misaligned.jpg', blend_visual)
