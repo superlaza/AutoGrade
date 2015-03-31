@@ -76,7 +76,7 @@ def grade(registered):
     registered = cv2.resize(registered, tempSize[::-1])
 
     #if numbers are missing, print the registered image
-    if len(missing)==0:
+    if len(missing) == 0:
         print "complete grade"
         return True
     else:

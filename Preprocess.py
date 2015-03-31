@@ -1,22 +1,36 @@
 import cv2
 import numpy as np
 
-win = (500,500)
 big = ((80,80), (420,420))
 small = ((150,150), (350,350))
 
-def drawSquare(im, ((xo, yo), (x, y))):
+win = (500, 500)
+r_big = 180
+# division between integers produces integer (by rounding)
+big = (((win[0]/2)-r_big, (win[1]/2)-r_big), ((win[0]/2)+r_big, (win[1]/2)+r_big))
+
+
+def draw_square(im):
+    ((xo, yo), (x, y)) = big
     cv2.line(im, (xo,yo), (x,yo), (0,255,0))
     cv2.line(im, (x,yo), (x,y), (0,255,0))
     cv2.line(im, (x,y), (xo,y), (0,255,0))
     cv2.line(im, (xo,y), (xo,yo), (0,255,0))
 
-def region(im):
-    im[:big[0][0],:] = 0
-    im[:,:big[0][1]] = 0
-    im[big[1][0]:im.shape[1],:] = 0
-    im[:,big[1][1]:im.shape[0]] = 0
-    im[small[0][0]:small[1][0],small[0][1]:small[1][1]] = 0
+
+def region(im, margin):
+    im[:big[0][0]-margin, :] = 0 #top
+    im[:, :big[0][1]-margin] = 0 #left
+    im[big[1][0]+margin:im.shape[1], :] = 0 #bottom
+    im[:, big[1][1]+margin:im.shape[0]] = 0 #right
+
+
+def show_intersections(im, intersections):
+    for point in intersections:
+        cv2.circle(im, (int(round(point[0])), int(round(point[1]))),
+                   6, (0, 0, 255), -1)
+    cv2.imshow("corners", im)
+
 
 def preprocess(im):
     #why do we cut the image again?

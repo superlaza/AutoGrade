@@ -11,7 +11,7 @@ from random import randint
 class Box:
     TL = TR = BL = BR = np.array([0,0], dtype=np.int)
     #lexicographically ordered list
-    pList = []
+    p_list = []
     height = 0
     width = 0
 
@@ -30,7 +30,7 @@ class Box:
         self.TR = np.array([self.BR[0], self.TL[1]], dtype=np.int)
         self.BL = np.array([self.TL[0], self.BR[1]], dtype=np.int)
 
-        self.pList = [self.TL, self.TR, self.BL, self.BR]
+        self.p_list = [self.TL, self.TR, self.BL, self.BR]
 
         self.width, self.height = BR-TL
    
